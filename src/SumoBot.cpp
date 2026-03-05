@@ -1,16 +1,24 @@
 #include "SumoBot.h"
 
-void SumoBot::update(float distance_cm, bool edge_detected) {
+void SumoBot::update(float distance_enemy_cm, bool ring_edge_detected, uint32_t current_time_ms) {
     // State transition logic
-    if (edge_detected) {
-        setState(EVADE);
-    } else if (distance_cm < 40.0) {
-        setState(ATTACK);
-    } else {
-        setState(SEARCH);
+    if (is_evading && current_time_ms - evade_start_time < EVADE_DURATION_MS) {
+        current_state = EVADE;
+    }
+    else {
+        is_evading = false;
+        if (ring_edge_detected) {
+            evade_start_time = current_time_ms;
+            current_state = EVADE;
+            is_evading = true;
+        } else if (distance_enemy_cm < ATTACK_THRESHOLD_CM) {
+            current_state = ATTACK;
+        } else {
+            current_state = SEARCH;
+        }
     }
 
-     // Action logic
+    // Action logic
     executeState();
 }
 
@@ -28,10 +36,6 @@ void SumoBot::executeState() {
         default:
             std::cout << "UNKNOWN STATE..." << std::endl;
     }
-}
-
-void SumoBot::setState(State state) {
-    current_state = state;
 }
 
 std::ostream& operator<<(std::ostream& os, State state) {
