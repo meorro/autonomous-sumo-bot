@@ -2,18 +2,34 @@
 
 int main() {
     SumoBot sumo_bot;
-
-    std::cout << "--- Simulation Start ---\n";
-    sumo_bot.update(100.0, false, 100); // Enemy far, no edge
-    sumo_bot.update(30.0, false, 125);  // Enemy spotted!
-    sumo_bot.update(10.0, true, 150);   // Pushed to the edge!
-
     
-    sumo_bot.update(20.0, true, 175);
-    sumo_bot.update(40.0, false, 200);
-    sumo_bot.update(70.0, true, 225);
-    sumo_bot.update(30.0, false, 1649);
-    sumo_bot.update(30.0, false, 1650);
+    std::cout << "--- Simulation Start ---\n";
 
+    // Simulate 3 seconds of a match, ticking every 50 milliseconds
+    for (uint32_t time_ms = 0; time_ms <= 3000; time_ms += 50) {
+        
+        // Default environment: Safe, nothing around, resets at every tick
+        float enemy_dist_cm = 100.0; 
+        bool edge_seen = false;   
+
+        // At 500ms, an enemy appears in front
+        if (time_ms >= 500 && time_ms < 1000) {
+            enemy_dist_cm = 20.0; 
+        }
+        
+        // At 1000ms, we get pushed to the edge
+        if (time_ms == 1000) {
+            edge_seen = true;
+        }
+
+        // At 2000ms, enemy appears again
+        if (time_ms >= 2000 && time_ms <= 2500) {
+            enemy_dist_cm = 15.0;
+        }
+
+        sumo_bot.update(enemy_dist_cm, edge_seen, time_ms);
+    }
+
+    std::cout << "--- Simulation End ---\n";
     return 0;
 }
