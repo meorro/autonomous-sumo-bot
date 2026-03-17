@@ -1,66 +1,121 @@
 #include "SumoBot.h"
 
-void SumoBot::update(float distance_enemy_cm, bool ring_edge_detected, uint32_t current_time_ms) {
-    // Bot remains in the ESCAPE_EDGE state for 1.5 seconds
-    // in order to have time get away from the edge. Otherwise,
-    // it would switch to another state the moment the white line
-    // is no longer sensed and thus going to the edge again
-    if (is_evading && current_time_ms - escape_edge_start_time < ESCAPE_EDGE_DURATION_MS) {
-        current_state = ESCAPE_EDGE;
-    }
-    else {
-        is_evading = false;
-        if (ring_edge_detected) {
-            escape_edge_start_time = current_time_ms;
-            current_state = ESCAPE_EDGE;
-            is_evading = true;
-        } else if (getFilteredDistance(distance_enemy_cm) < ATTACK_THRESHOLD_CM) {
-            current_state = ATTACK;
+void SumoBot::setMotors(int left_speed, int right_speed) {
+    std::cout << "L: " << left_speed << " | R: " << right_speed << std::endl;
+}
+
+void SumoBot::update(float distance_enemy_cm, bool ring_edge_detected, uint32_t current_time_ms, bool start_button_pressed) {
+    /*
+     * The bot remains in the IDLE state if not in a match
+     */
+    if (!match_started) {
+        if (start_button_pressed) {
+            start_button_pressed_time_ms = current_time_ms;
+            match_started = true;
         } else {
-            current_state = SEARCH;
+            current_state = IDLE;
+        }
+    }
+    if (match_started) {
+        /*
+        * Per the mini-sumo rules, the bot should in the IDLE state
+        * for at least IDLE_DURATION_MS after being started
+        */
+        if (current_time_ms - start_button_pressed_time_ms < IDLE_DURATION_MS) {
+            current_state = IDLE;
+        }
+
+        /* 
+         *  The bot remains in the ESCAPE_EDGE state for ESCAPE_EDGE_DURATION_MS
+         *  in order to have time get away from the edge. Otherwise,
+         *  it would switch to another state the moment the white line
+         *  is no longer sensed and thus going to the edge again
+         */
+        else {
+            if (is_evading && current_time_ms - escape_edge_start_time_ms < ESCAPE_EDGE_DURATION_MS) {
+                current_state = ESCAPE_EDGE;
+            }
+            else {
+                is_evading = false;
+                if (ring_edge_detected) {
+                    escape_edge_start_time_ms = current_time_ms;
+                    current_state = ESCAPE_EDGE;
+                    is_evading = true;
+                } else if (getFilteredDistance(distance_enemy_cm) < ATTACK_THRESHOLD_CM) {
+                    current_state = ATTACK;
+                } else {
+                    current_state = SEARCH;
+                }
+            }
         }
     }
 
     if (current_state != previous_state) {
-        std::cout << "[Time: " << current_time_ms << "ms] State changed to: ";
-        printState();
+        std::cout << "[Time: " << current_time_ms << "ms] State changed from " << previous_state << " to " << current_state << std::endl;
         previous_state = current_state;
+    }
+
+    /* Action logic */
+    executeState(current_time_ms);
+}
+
+void SumoBot::executeState(uint32_t current_time_ms) {
+    switch(current_state) {
+        case IDLE:
+            std::cout << "[Time: " << current_time_ms << "ms] IDLE: ";
+            setMotors(0, 0);
+            break;
+        case SEARCH:
+            std::cout << "[Time: " << current_time_ms << "ms] SEARCH: ";
+            setMotors(150, -150);
+            break;
+        case ATTACK:
+            std::cout << "[Time: " << current_time_ms << "ms] ATTACK: ";
+            setMotors(255, 255);
+            break;
+        case ESCAPE_EDGE:
+            std::cout << "[Time: " << current_time_ms << "ms] ESCAPE_EDGE: ";
+            setMotors(-255, -255);
+            break;
+        default:
+            std::cout << "[Time: " << current_time_ms << "ms] UNKNOWN STATE" << std::endl;
     }
 }
 
 std::ostream& operator<<(std::ostream& os, State state) {
     switch (state) {
-        case State::SEARCH: os << "SEARCH"; break;
-        case State::ATTACK: os << "ATTACK"; break;
-        case State::ESCAPE_EDGE:  os << "ESCAPE_EDGE"; break;
-        default:            os << "Unknown"; break;
+        case State::IDLE:           os << "IDLE"; break;
+        case State::SEARCH:         os << "SEARCH"; break;
+        case State::ATTACK:         os << "ATTACK"; break;
+        case State::ESCAPE_EDGE:    os << "ESCAPE_EDGE"; break;
+        default:                    os << "Unknown"; break;
     }
     return os;
 }
 
-void SumoBot::printState() {
+void SumoBot::printCurrentState() {
     std::cout << current_state << std::endl;
 }
 
-// Moving average filter
+/* Moving average filter */
 float SumoBot::getFilteredDistance(float new_reading) {
-    // Subtract the oldest value that is about to be overwritten
+    /* Subtract the oldest value that is about to be overwritten */
     running_sum -= distance_history[history_index];
 
-    // Add the new value
+    /* Add the new value */
     running_sum += new_reading;
     
-    // Replace the oldest reading in the array with the new_reading
+    /* Replace the oldest reading in the array with the new_reading */
     distance_history[history_index] = new_reading;
 
-    // Increment the history_index (and wrap it back to 0 if it hits 5)
+    /* Increment the history_index (and wrap it back to 0 if it hits 5) */
     history_index = (history_index + 1) % 5;
 
-    // Keep track of how many valid samples we have
+    /* Keep track of how many valid samples we have */
     if (valid_samples < 5) {
         ++valid_samples;
     }
 
-    // Return the average distance of all valid samples
+    /* Return the average distance of all valid samples */
     return running_sum / valid_samples;
 }
