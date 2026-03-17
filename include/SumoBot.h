@@ -17,8 +17,9 @@ private:
     uint32_t escape_edge_start_time = 0;
     bool is_evading = false;
 
-    float distance_history[5];
+    float distance_history[5] = {0};
     int history_index = 0;
+    float running_sum = 0.0;
     int valid_samples = 0; // Tracks how many readings we currently have (max 5)
 
 public:

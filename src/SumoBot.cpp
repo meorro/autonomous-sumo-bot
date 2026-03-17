@@ -44,6 +44,12 @@ void SumoBot::printState() {
 
 // Moving average filter
 float SumoBot::getFilteredDistance(float new_reading) {
+    // Subtract the oldest value that is about to be overwritten
+    running_sum -= distance_history[history_index];
+
+    // Add the new value
+    running_sum += new_reading;
+    
     // Replace the oldest reading in the array with the new_reading
     distance_history[history_index] = new_reading;
 
@@ -55,12 +61,6 @@ float SumoBot::getFilteredDistance(float new_reading) {
         ++valid_samples;
     }
 
-    // Sum all valid samples
-    float distance_sum = 0;
-    for (int i = 0; i < valid_samples; ++i) {
-        distance_sum += distance_history[i];
-    }
-
     // Return the average distance of all valid samples
-    return distance_sum / valid_samples;
+    return running_sum / valid_samples;
 }
