@@ -4,7 +4,8 @@ void SumoBot::setMotors(int left_speed, int right_speed) {
     std::cout << "L: " << left_speed << " | R: " << right_speed << std::endl;
 }
 
-void SumoBot::update(float distance_enemy_cm, bool ring_edge_detected, uint32_t current_time_ms, bool start_button_pressed) {
+void SumoBot::update(float distance_enemy_cm, bool ring_edge_front_detected, bool ring_edge_back_detected,
+                     uint32_t current_time_ms, bool start_button_pressed) {
     /*
      * The bot remains in the IDLE state if not in a match
      */
@@ -26,21 +27,27 @@ void SumoBot::update(float distance_enemy_cm, bool ring_edge_detected, uint32_t 
         }
 
         /* 
-         *  The bot remains in the ESCAPE_EDGE state for ESCAPE_EDGE_DURATION_MS
-         *  in order to have time get away from the edge. Otherwise,
-         *  it would switch to another state the moment the white line
-         *  is no longer sensed and thus going to the edge again
+         *  The bot remains in the ESCAPE_EDGE_FRONT/ESCAPE_EDGE_BACK state
+         *  for ESCAPE_EDGE_DURATION_MS in order to have time get away from
+         *  the edge. Otherwise, it would switch to another state the moment
+         *  the white line is no longer sensed and thus going to the edge again
          */
         else {
-            if (is_evading && current_time_ms - escape_edge_start_time_ms < ESCAPE_EDGE_DURATION_MS) {
-                current_state = ESCAPE_EDGE;
-            }
-            else {
-                is_evading = false;
-                if (ring_edge_detected) {
+            if (is_evading_front && current_time_ms - escape_edge_start_time_ms < ESCAPE_EDGE_DURATION_MS) {
+                current_state = ESCAPE_EDGE_FRONT;
+            } else if (is_evading_back && current_time_ms - escape_edge_start_time_ms < ESCAPE_EDGE_DURATION_MS) {
+                current_state = ESCAPE_EDGE_BACK;
+            } else {
+                is_evading_front = false;
+                is_evading_back = false;
+                if (ring_edge_front_detected) {
                     escape_edge_start_time_ms = current_time_ms;
-                    current_state = ESCAPE_EDGE;
-                    is_evading = true;
+                    current_state = ESCAPE_EDGE_FRONT;
+                    is_evading_front = true;
+                } else if (ring_edge_back_detected) {
+                    escape_edge_start_time_ms = current_time_ms;
+                    current_state = ESCAPE_EDGE_BACK;
+                    is_evading_back = true;
                 } else if (getFilteredDistance(distance_enemy_cm) < ATTACK_THRESHOLD_CM) {
                     current_state = ATTACK;
                 } else {
@@ -73,9 +80,13 @@ void SumoBot::executeState(uint32_t current_time_ms) {
             std::cout << "[Time: " << current_time_ms << "ms] ATTACK: ";
             setMotors(255, 255);
             break;
-        case ESCAPE_EDGE:
-            std::cout << "[Time: " << current_time_ms << "ms] ESCAPE_EDGE: ";
+        case ESCAPE_EDGE_FRONT:
+            std::cout << "[Time: " << current_time_ms << "ms] ESCAPE_EDGE_FRONT: ";
             setMotors(-255, -255);
+            break;
+        case ESCAPE_EDGE_BACK:
+            std::cout << "[Time: " << current_time_ms << "ms] ESCAPE_EDGE_BACK: ";
+            setMotors(255, 255);
             break;
         default:
             std::cout << "[Time: " << current_time_ms << "ms] UNKNOWN STATE" << std::endl;
@@ -84,11 +95,12 @@ void SumoBot::executeState(uint32_t current_time_ms) {
 
 std::ostream& operator<<(std::ostream& os, State state) {
     switch (state) {
-        case State::IDLE:           os << "IDLE"; break;
-        case State::SEARCH:         os << "SEARCH"; break;
-        case State::ATTACK:         os << "ATTACK"; break;
-        case State::ESCAPE_EDGE:    os << "ESCAPE_EDGE"; break;
-        default:                    os << "Unknown"; break;
+        case State::IDLE:               os << "IDLE"; break;
+        case State::SEARCH:             os << "SEARCH"; break;
+        case State::ATTACK:             os << "ATTACK"; break;
+        case State::ESCAPE_EDGE_FRONT:  os << "ESCAPE_EDGE_FRONT"; break;
+        case State::ESCAPE_EDGE_BACK:   os << "ESCAPE_EDGE_BACK"; break;
+        default:                        os << "Unknown"; break;
     }
     return os;
 }

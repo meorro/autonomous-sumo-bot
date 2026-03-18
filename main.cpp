@@ -5,8 +5,8 @@ int main() {
     
     std::cout << "--- Simulation Start ---\n";
 
-    /* Simulate 10 seconds of a match, ticking every 100 milliseconds */
-    for (uint32_t current_time_ms = 0; current_time_ms <= 10000; current_time_ms += 100) {
+    /* Simulate 15 seconds of a match, ticking every 100 milliseconds */
+    for (uint32_t current_time_ms = 0; current_time_ms <= 15000; current_time_ms += 100) {
         
         /* Default environment:
          *      match not started,
@@ -16,29 +16,36 @@ int main() {
          */
         bool start_button_pressed = false;
         float distance_enemy_cm = 100.0; 
-        bool ring_edge_detected = false; 
+        bool ring_edge_front_detected = false;
+        bool ring_edge_back_detected = false; 
 
         /* At 2000ms, start the match */
         if (current_time_ms == 2000) {
             start_button_pressed = true;
         }
 
-        /* At 5500ms, an enemy appears in front */
-        if (current_time_ms >= 5500 && current_time_ms < 6000) {
+        /* At 8000ms, an enemy appears in front */
+        if (current_time_ms >= 8000 && current_time_ms < 8500) {
             distance_enemy_cm = 20.0;
         }
         
-        /* At 6000ms, we get pushed to the edge */
-        if (current_time_ms == 6000) {
-            ring_edge_detected = true;
+        /* At 9000ms, we get pushed to the front edge */
+        if (current_time_ms == 9000) {
+            ring_edge_front_detected = true;
         }
 
-        /* At 7000ms, enemy appears again */
-        if (current_time_ms >= 7000 && current_time_ms <= 8500) {
+        /* At 11000ms, enemy appears again */
+        if (current_time_ms >= 11000 && current_time_ms <= 11500) {
             distance_enemy_cm = 15.0;
         }
 
-        sumo_bot.update(distance_enemy_cm, ring_edge_detected, current_time_ms, start_button_pressed);
+        /* At 13000ms, we get pushed to the back edge */
+        if (current_time_ms == 13000) {
+            ring_edge_back_detected = true;
+        }
+
+        sumo_bot.update(distance_enemy_cm, ring_edge_front_detected, ring_edge_back_detected,
+                        current_time_ms, start_button_pressed);
         start_button_pressed = false;
     }
 
