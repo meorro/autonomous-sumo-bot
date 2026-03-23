@@ -1,4 +1,8 @@
+#ifndef ARDUINO
 #include <iostream>
+#else
+#include <Arduino.h>
+#endif
 
 const uint32_t IDLE_DURATION_MS = 5000;
 const uint32_t ESCAPE_EDGE_DURATION_MS = 1500;
@@ -39,4 +43,8 @@ public:
     float getFilteredDistance(float new_reading);
 };
 
+#ifndef ARDUINO
 std::ostream& operator<<(std::ostream& os, State state);
+#else
+const char* stateToString(State state);
+#endif

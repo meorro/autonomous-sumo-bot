@@ -1,7 +1,7 @@
 #include "SumoBot.h"
 
 int main() {
-    SumoBot sumo_bot;
+    SumoBot sumobot;
     
     std::cout << "--- Simulation Start ---\n";
 
@@ -44,7 +44,7 @@ int main() {
             ring_edge_back_detected = true;
         }
 
-        sumo_bot.update(distance_enemy_cm, ring_edge_front_detected, ring_edge_back_detected,
+        sumobot.update(distance_enemy_cm, ring_edge_front_detected, ring_edge_back_detected,
                         current_time_ms, start_button_pressed);
         start_button_pressed = false;
     }
